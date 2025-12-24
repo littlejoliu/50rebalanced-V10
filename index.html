@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>50% 正2 策略 (V10.0 全知儀表板)</title>
+    <style>
+        /* 樣式設定 */
+        body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif; margin: 20px; background-color: #f4f6f8; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 25px; }
+        
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
+        .input-group input, .input-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; background-color: #fff; transition: 0.2s; }
+
+        /* 連結按鈕容器 */
+        .flex-row { display: flex; align-items: flex-end; gap: 10px; }
+        .flex-grow { flex-grow: 1; }
+        .link-btn { background-color: #6c757d; color: white; border: none; padding: 12px 15px; border-radius: 6px; cursor: pointer; white-space: nowrap; height: 46px; font-weight: bold; }
+        .link-btn:hover { background-color: #5a6268; }
+
+        /* 執行按鈕 */
+        button.execute-button { background-color: #2c3e50; color: white; width: 100%; padding: 15px; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        button.execute-button:hover { background-color: #1a252f; transform: translateY(-1px); }
+        
+        /* 結果區塊 */
+        .result-box { margin-top: 25px; padding: 25px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; display: none; }
+        .result-item { margin-bottom: 12px; font-size: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        
+        /* 參考指標表格 */
+        .ref-table { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 0.9em; }
+        .ref-table th, .ref-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .ref-table th { background-color: #e9ecef; color: #555; }
+        .ref-label { text-align: left !important; font-weight: bold; color: #444; }
+
+        /* 顏色標記 */
+        .highlight-green { color: #28a745; font-weight: bold; }
+        .highlight-red { color: #dc3545; font-weight: bold; }
+        .error-msg { color: #dc3545; text-align: center; display: none; margin-top: 10px; font-weight: bold; background-color: #ffe6e6; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⚖️ 50% 正2 策略 (V10.0)</h2>
+    
+    <div class="input-group">
+        <label>💰 目前現金餘額 (元)</label>
+        <input type="number" id="cashInput" placeholder="請輸入現金金額">
+    </div>
+    <div class="input-group">
+        <label>📈 00631L 現有市值 (元)</label>
+        <input type="number" id="stockInput" placeholder="請輸入股票市值">
+    </div>
+    <div class="input-group flex-row">
+        <div class="flex-grow">
+            <label>🚦 景氣燈號</label>
+            <select id="macroInput">
+                <option value="綠燈" selected>綠燈 (穩定)</option>
+                <option value="藍燈">藍燈 (低迷)</option>
+                <option value="黃藍燈">黃藍燈 (轉向)</option>
+                <option value="黃紅燈">黃紅燈 (轉向)</option>
+                <option value="紅燈">紅燈 (過熱)</option>
+            </select>
+        </div>
+        <button class="link-btn" onclick="window.open('https://index.ndc.gov.tw/n/zh_tw', '_blank')">🔍 查燈號</button>
+    </div>
+    <div class="input-group flex-row">
+        <div class="flex-grow">
+            <label>📊 VIX 指數</label>
+            <input type="number" id="vixInput" placeholder="輸入數值" value="15">
+        </div>
+        <button class="link-btn" onclick="window.open('https://finance.yahoo.com/quote/%5EVIX', '_blank')">🔍 查 VIX</button>
+    </div>
+    
+    <button class="execute-button" onclick="runStrategy()">計算平衡數據</button>
+    <div id="errorMsg" class="error-msg">⚠️ 請輸入金額才能計算！</div>
+
+    <div id="resultBox" class="result-box">
+        <div class="result-item">
+            <span>📊 總資產</span>
+            <span id="resTotal" style="font-weight:bold;"></span>
+        </div>
+        <div class="result-item">
+            <span>🎯 宏觀目標 (P)</span>
+            <span id="resTargetLogic" style="font-weight:bold; color:#007bff;"></span>
+        </div>
+        <div class="result-item">
+            <span>📉 目前持倉</span>
+            <span id="resActual"></span>
+        </div>
+        
+        <div style="background-color: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin: 15px 0; text-align: center;">
+            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">若要完美平衡，需操作：</div>
+            <div id="resAmount" style="font-size: 1.6em; font-weight: bold;"></div>
+        </div>
+
+        <div style="font-weight: bold; color: #555; margin-top: 20px;">🛡️ 安全邊界參考 (自行判斷)</div>
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th>標準</th>
+                    <th>允許波動範圍 (%)</th>
+                    <th>允許市值範圍 ($)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="ref-label">🗓️ 季檢 (±10%)</td>
+                    <td id="qRangePct"></td>
+                    <td id="qRangeVal"></td>
+                </tr>
+                <tr>
+                    <td class="ref-label">⚡ 平日 (±15%)</td>
+                    <td id="dRangePct"></td>
+                    <td id="dRangeVal"></td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="font-size: 0.8em; color: #888; margin-top: 5px;">*若目前市值超出範圍，代表觸發門檻</div>
+    </div>
+</div>
+
+<script>
+    const P_DEFAULT = 0.50; 
+
+    function runStrategy() {
+        // 1. 抓取輸入
+        let cashStr = document.getElementById('cashInput').value;
+        let stockStr = document.getElementById('stockInput').value;
+        let light = document.getElementById('macroInput').value;
+        let vixStr = document.getElementById('vixInput').value;
+
+        // 2. 防呆
+        if (cashStr === '' || stockStr === '') {
+            document.getElementById('errorMsg').style.display = 'block';
+            document.getElementById('resultBox').style.display = 'none';
+            return;
+        }
+        document.getElementById('errorMsg').style.display = 'none';
+        document.getElementById('resultBox').style.display = 'block';
+
+        // 3. 數值轉換
+        let cash = parseFloat(cashStr);
+        let stock = parseFloat(stockStr);
+        let vix = parseFloat(vixStr) || 15;
+        let total = cash + stock;
+
+        // 4. 決定目標比例 P
+        let targetP = P_DEFAULT;
+        let logicText = "中性 (50%)";
+
+        if (light === '紅燈' && vix <= 12) {
+            targetP = 0.40;
+            logicText = "🔴 貪婪 (40%)";
+        } else if (light === '藍燈' && vix >= 30) {
+            targetP = 0.60;
+            logicText = "🔵 恐慌 (60%)";
+        }
+
+        // 5. 計算完美平衡
+        let targetStockVal = total * targetP;
+        let actualRatio = stock / total;
+        let diffVal = targetStockVal - stock;
+
+        // 6. 計算參考門檻 (Ranges)
+        // 季度 +/- 10%
+        let qLowerPct = (targetP * 0.90) * 100;
+        let qUpperPct = (targetP * 1.10) * 100;
+        let qLowerVal = total * (targetP * 0.90);
+        let qUpperVal = total * (targetP * 1.10);
+
+        // 平日 +/- 15%
+        let dLowerPct = (targetP * 0.85) * 100;
+        let dUpperPct = (targetP * 1.15) * 100;
+        let dLowerVal = total * (targetP * 0.85);
+        let dUpperVal = total * (targetP * 1.15);
+
+        // 7. 更新介面
+        document.getElementById('resTotal').innerText = "$" + Math.round(total).toLocaleString();
+        document.getElementById('resTargetLogic').innerText = logicText;
+        document.getElementById('resActual').innerText = (actualRatio * 100).toFixed(2) + "%";
+        
+        // 顯示完美調整金額
+        let amountElem = document.getElementById('resAmount');
+        if (diffVal > 0) {
+            amountElem.innerText = "買進 " + Math.round(diffVal).toLocaleString();
+            amountElem.style.color = "#28a745"; 
+        } else if (diffVal < 0) {
+            amountElem.innerText = "賣出 " + Math.round(Math.abs(diffVal)).toLocaleString();
+            amountElem.style.color = "#dc3545"; 
+        } else {
+            amountElem.innerText = "完美平衡 (0)";
+            amountElem.style.color = "#333";
+        }
+
+        // 顯示參考表格
+        document.getElementById('qRangePct').innerText = qLowerPct.toFixed(1) + "% ~ " + qUpperPct.toFixed(1) + "%";
+        document.getElementById('qRangeVal').innerText = "$" + (qLowerVal/10000).toFixed(1) + "萬 ~ $" + (qUpperVal/10000).toFixed(1) + "萬";
+
+        document.getElementById('dRangePct').innerText = dLowerPct.toFixed(1) + "% ~ " + dUpperPct.toFixed(1) + "%";
+        document.getElementById('dRangeVal').innerText = "$" + (dLowerVal/10000).toFixed(1) + "萬 ~ $" + (dUpperVal/10000).toFixed(1) + "萬";
+    }
+</script>
+
+</body>
+</html>
