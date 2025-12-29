@@ -3,33 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>50% 正2 策略模擬器 (V8.0 透明決策版)</title>
+    <title>60/40 季度執行版 (V12.0)</title>
     <style>
-        /* 樣式設定 */
-        body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 25px; }
-        
+        body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif; margin: 20px; background-color: #f4f6f8; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 25px; }
         .input-group { margin-bottom: 18px; }
         .input-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
-        .input-group input, .input-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; background-color: #fff; }
-        
-        /* 連結按鈕容器 */
+        .input-group input, .input-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; background-color: #fff; }
         .flex-row { display: flex; align-items: flex-end; gap: 10px; }
         .flex-grow { flex-grow: 1; }
-        .link-btn { background-color: #17a2b8; color: white; border: none; padding: 12px 15px; border-radius: 5px; cursor: pointer; white-space: nowrap; height: 45px; font-weight: bold; }
-        .link-btn:hover { background-color: #138496; }
-
-        /* 執行按鈕 */
-        button.execute-button { background-color: #007bff; color: white; width: 100%; padding: 14px; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: 0.2s; }
+        .link-btn { background-color: #6c757d; color: white; border: none; padding: 12px 15px; border-radius: 6px; cursor: pointer; white-space: nowrap; height: 46px; font-weight: bold; }
+        .link-btn:hover { background-color: #5a6268; }
+        button.execute-button { background-color: #007bff; color: white; width: 100%; padding: 15px; border: none; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.2s; }
         button.execute-button:hover { background-color: #0056b3; transform: translateY(-1px); }
+        .result-box { margin-top: 25px; padding: 25px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; display: none; }
+        .result-item { margin-bottom: 12px; font-size: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; }
         
-        /* 結果區塊 */
-        .result-box { margin-top: 25px; padding: 20px; background-color: #e9ecef; border-radius: 8px; border-left: 6px solid #007bff; display: none; }
-        .result-item { margin-bottom: 12px; font-size: 16px; display: flex; justify-content: space-between; border-bottom: 1px solid #dcdcdc; padding-bottom: 8px; }
-        .debug-info { font-size: 14px; color: #666; background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px dashed #ccc; }
+        /* 狀態儀表板 */
+        .debug-info { font-size: 14px; color: #666; background-color: #fff; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px dashed #ccc; }
         
-        /* 顏色標記 */
         .highlight-green { color: #28a745; font-weight: bold; }
         .highlight-red { color: #dc3545; font-weight: bold; }
         .highlight-blue { color: #007bff; font-weight: bold; }
@@ -39,18 +32,16 @@
 <body>
 
 <div class="container">
-    <h2>📈 50% 正2 策略模擬器</h2>
+    <h2>🚀 60% 正2 季度執行版 (V12.0)</h2>
     
     <div class="input-group">
         <label>💰 目前現金餘額 (元)</label>
         <input type="number" id="cashInput" placeholder="請輸入現金金額">
     </div>
-
     <div class="input-group">
         <label>📈 00631L 現有市值 (元)</label>
         <input type="number" id="stockInput" placeholder="請輸入股票市值">
     </div>
-
     <div class="input-group flex-row">
         <div class="flex-grow">
             <label>🚦 景氣燈號</label>
@@ -64,7 +55,6 @@
         </div>
         <button class="link-btn" onclick="window.open('https://index.ndc.gov.tw/n/zh_tw', '_blank')">🔍 查燈號</button>
     </div>
-    
     <div class="input-group flex-row">
         <div class="flex-grow">
             <label>📊 VIX 指數</label>
@@ -74,150 +64,133 @@
     </div>
     
     <div class="input-group">
-        <label>🗓️ 是否為季度檢查日?</label>
-        <select id="quarterInput">
-            <option value="false" selected>否</option>
-            <option value="true">是</option>
+        <label>🗓️ 是否為季度檢查日? (3/6/9/12月底)</label>
+        <select id="quarterInput" onchange="runStrategy()"> <option value="false" selected>否 (平日寬鬆 ±15%)</option>
+            <option value="true">是 (季檢嚴格 ±10%)</option>
         </select>
     </div>
-
+    
     <button class="execute-button" onclick="runStrategy()">執行策略判讀</button>
     <div id="errorMsg" class="error-msg">⚠️ 請輸入金額才能計算！</div>
 
     <div id="resultBox" class="result-box">
         <div class="debug-info">
-            <div>🔎 <strong>偵測數據：</strong> <span id="debugStatus"></span></div>
-            <div>🎯 <strong>目標比例：</strong> <span id="debugTarget"></span></div>
-            <div>🛡️ <strong>安全區間：</strong> <span id="debugRange"></span> (在此範圍不動作)</div>
+            <div>⚙️ <strong>目前模式：</strong> <span id="modeStatus"></span></div>
+            <div>🎯 <strong>目標配置：</strong> <span id="debugTarget"></span></div>
+            <div>🛡️ <strong>安全區間：</strong> <span id="debugRange"></span> (在此範圍不動)</div>
         </div>
 
         <div class="result-item">
             <span>📊 總資產</span>
-            <span id="resTotal" style="font-weight:bold; color:#0056b3;"></span>
+            <span id="resTotal" style="font-weight:bold;"></span>
         </div>
         <div class="result-item">
-            <span>📉 實際持倉比例</span>
+            <span>📉 目前持倉</span>
             <span id="resActual"></span>
         </div>
+        
         <div class="result-item">
-            <span>👉 建議操作</span>
-            <span id="resAction" style="font-size:1.1em;"></span>
+            <span>👉 執行指令</span>
+            <span id="resAction" style="font-size:1.3em;"></span>
         </div>
         <div class="result-item" style="border:none; margin-top:10px;">
-            <span>💰 交易金額</span>
+            <span>💰 建議交易金額</span>
             <span id="resAmount" style="font-size:1.2em;"></span>
         </div>
     </div>
 </div>
 
 <script>
-    // 策略參數
+    // 參數設定 (成長版 60/40)
     const P_DEFAULT = 0.60; 
-    const THRESHOLD_EMERGENCY = 0.15; // 15% (緊急)
-    const THRESHOLD_QUARTER = 0.10;   // 10% (季度)
+    const THRESHOLD_EMERGENCY = 0.15; // 平日 15%
+    const THRESHOLD_QUARTER = 0.10;   // 季檢 10%
 
     function runStrategy() {
-        // 1. 抓取輸入值
         let cashStr = document.getElementById('cashInput').value;
         let stockStr = document.getElementById('stockInput').value;
         let light = document.getElementById('macroInput').value;
         let vixStr = document.getElementById('vixInput').value;
         let isQuarter = document.getElementById('quarterInput').value === 'true';
 
-        // 2. 防呆檢查
         if (cashStr === '' || stockStr === '') {
-            document.getElementById('errorMsg').style.display = 'block';
-            document.getElementById('resultBox').style.display = 'none';
-            return;
+            // 若還沒輸入數字，先不顯示錯誤，等按按鈕再說
+            // 但如果已經有結果框了，就即時更新
+            if(document.getElementById('resultBox').style.display === 'block') {
+                 // continue to update
+            } else {
+                return; 
+            }
+        } else {
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('resultBox').style.display = 'block';
         }
-        document.getElementById('errorMsg').style.display = 'none';
-        document.getElementById('resultBox').style.display = 'block';
 
-        // 3. 數值轉換
         let cash = parseFloat(cashStr);
         let stock = parseFloat(stockStr);
-        let vix = parseFloat(vixStr) || 15; // 若沒填，預設15
+        let vix = parseFloat(vixStr) || 15;
         let total = cash + stock;
 
-        // 4. 決定目標比例 P
+        // 1. 決定目標 P (60% 基準)
         let targetP = P_DEFAULT;
-        let logicText = "中性策略 (50%)";
+        let logicText = "中性 (60%)";
 
-        // *** 關鍵判斷邏輯 ***
         if (light === '紅燈' && vix <= 12) {
-            targetP = 0.40;
-            logicText = "🔴 貪婪降速 (40%)";
+            targetP = 0.50; // 貪婪降至 50%
+            logicText = "🔴 貪婪降速 (50%)";
         } else if (light === '藍燈' && vix >= 30) {
-            targetP = 0.60;
-            logicText = "🔵 恐慌加速 (60%)";
+            targetP = 0.70; // 恐慌升至 70%
+            logicText = "🔵 恐慌加速 (70%)";
         }
 
-        // 5. 計算數據
         let targetStockVal = total * targetP;
         let actualRatio = stock / total;
         let action = "維持不變";
         let tradeVal = 0;
         let actionClass = "highlight-blue";
 
-        // 6. 計算門檻 (為了除錯，這裡先算出來顯示)
-        let upperE = targetP * (1 + THRESHOLD_EMERGENCY);
-        let lowerE = targetP * (1 - THRESHOLD_EMERGENCY);
-        let upperQ = targetP * (1 + THRESHOLD_QUARTER);
-        let lowerQ = targetP * (1 - THRESHOLD_QUARTER);
+        // 2. 決定門檻 (Dynamic Threshold)
+        let threshold = isQuarter ? THRESHOLD_QUARTER : THRESHOLD_EMERGENCY;
+        let upperLimit = targetP * (1 + threshold);
+        let lowerLimit = targetP * (1 - threshold);
         
-        // 決定當下生效的門檻範圍 (顯示用)
-        let activeLower = lowerE;
-        let activeUpper = upperE;
-        if (isQuarter) {
-             // 如果是季度，檢查範圍變窄
-             activeLower = lowerQ;
-             activeUpper = upperQ;
-        }
+        let modeText = isQuarter ? "🗓️ 季度檢查 (±10%)" : "⚡ 平日監控 (±15%)";
 
-        // 7. 執行判斷 (邏輯核心)
-        if (actualRatio >= upperE) {
-            action = "緊急賣出 (高於 " + (upperE*100).toFixed(1) + "%)";
-            tradeVal = stock - targetStockVal; // 回到目標
+        // 3. 判斷邏輯
+        if (actualRatio >= upperLimit) {
+            action = isQuarter ? "季度賣出" : "緊急賣出";
+            tradeVal = stock - targetStockVal; // 回歸目標
             actionClass = "highlight-red";
-        } else if (actualRatio <= lowerE) {
-            action = "緊急買入 (低於 " + (lowerE*100).toFixed(1) + "%)";
-            tradeVal = targetStockVal - stock; // 回到目標
+        } else if (actualRatio <= lowerLimit) {
+            action = isQuarter ? "季度買入" : "緊急買入";
+            tradeVal = targetStockVal - stock; // 回歸目標
             actionClass = "highlight-green";
-        } else if (isQuarter) {
-            if (actualRatio >= upperQ) {
-                action = "季度賣出";
-                tradeVal = stock - targetStockVal;
-                actionClass = "highlight-red";
-            } else if (actualRatio <= lowerQ) {
-                action = "季度買入";
-                tradeVal = targetStockVal - stock;
-                actionClass = "highlight-green";
-            }
         }
 
-        // 8. 更新介面
-        document.getElementById('resTotal').innerText = "NT$ " + Math.round(total).toLocaleString();
+        // 4. 更新 UI
+        document.getElementById('resTotal').innerText = "$" + Math.round(total).toLocaleString();
         document.getElementById('resActual').innerText = (actualRatio * 100).toFixed(2) + "%";
         
         let actSpan = document.getElementById('resAction');
         actSpan.innerText = action;
         actSpan.className = actionClass;
 
+        let amtSpan = document.getElementById('resAmount');
         if (tradeVal > 0) {
-            document.getElementById('resAmount').innerText = "NT$ " + Math.round(tradeVal).toLocaleString();
-            document.getElementById('resAmount').className = actionClass;
+            let prefix = action.includes("賣出") ? "賣出 " : "買入 ";
+            amtSpan.innerText = prefix + "$" + Math.round(tradeVal).toLocaleString();
+            amtSpan.className = actionClass;
         } else {
-            document.getElementById('resAmount').innerText = "NT$ 0";
-            document.getElementById('resAmount').className = "";
+            amtSpan.innerText = "無需交易";
+            amtSpan.className = "highlight-blue";
         }
 
-        // 9. 更新除錯儀表板 (Debug Info)
-        document.getElementById('debugStatus').innerText = `${light} + VIX ${vix}`;
+        // 更新儀表板
+        document.getElementById('modeStatus').innerText = modeText;
         document.getElementById('debugTarget').innerText = logicText;
-        document.getElementById('debugRange').innerText = `${(activeLower*100).toFixed(1)}% ~ ${(activeUpper*100).toFixed(1)}%`;
+        document.getElementById('debugRange').innerText = `${(lowerLimit*100).toFixed(1)}% ~ ${(upperLimit*100).toFixed(1)}%`;
     }
 </script>
 
 </body>
-
 </html>
